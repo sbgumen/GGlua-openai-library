@@ -23,9 +23,9 @@ local openai = CreateOpenAIClient("你的API密钥")
 
 -- 如果需要使用自定义的API地址
 local openai = CreateOpenAIClient("你的API密钥", "https://你的API地址/v1")
-如果没有openai账号，可以使用[国内中转api](https://api.lzx1.top)
-```
 
+```
+如果没有openai账号，可以使用[国内中转api](https://api.lzx1.top)
 ### 简单聊天示例
 
 ```lua
