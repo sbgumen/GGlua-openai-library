@@ -7,7 +7,7 @@
 load(gg.makeRequest('https://azapi.lzx1.top/lib/openai.lua').content)()
 
 -- 创建OpenAI客户端
-local openai = CreateOpenAIClient("sk-J5CILOBtozLoapePqfgBUMQODDj68DRlRZtFOrkC5OibeEES", "https://api.lzx1.top/v1")
+local openai = CreateOpenAIClient("api密钥", "openai代理地址(不填则使用openai官方api地址)")
 
 --示例获取可用模型
 function getModels()
