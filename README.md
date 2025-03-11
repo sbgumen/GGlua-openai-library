@@ -2,8 +2,8 @@
 
 # OpenAI-GG修改器库使用文档
 作者阿泽
-q2585579144
-技术支持claude
+QQ2585579144
+
 ## 简介
 
 这是一个专为GG修改器设计的OpenAI API客户端库，以单个Lua函数形式提供，无需外部依赖，方便在GG修改器中使用。通过这个库，你可以在GG修改器脚本中轻松调用OpenAI的各种API，包括GPT聊天、文本生成、图像生成、音频转录等功能。
@@ -15,6 +15,8 @@ q2585579144
 ```lua
 -- 导入库
 load(gg.makeRequest('https://azapi.lzx1.top/lib/openai.lua').content)()
+或者
+loadfile('openai.lua')--导入本地库
 
 -- 创建OpenAI客户端（使用你的API密钥）
 local openai = CreateOpenAIClient("你的API密钥")
