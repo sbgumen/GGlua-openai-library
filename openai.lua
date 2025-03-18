@@ -1,11 +1,11 @@
--- 作者阿泽，技术支持claude
+-- 作者阿泽
 -- OpenAI API 库 - 专为GG修改器设计
 -- 作为单一函数提供，无需require导入
 function CreateOpenAIClient(apiKey, baseUrl)
     local openai = {}
     
     -- OpenAI API基础URL（默认使用你提供的代理URL）
-    baseUrl = baseUrl or "https://api.lzx1.top/v1"
+    baseUrl = baseUrl or "http://api.openai.com/v1"
     
     -- 确保提供有效的API密钥
     if not apiKey or type(apiKey) ~= "string" or apiKey == "" then
