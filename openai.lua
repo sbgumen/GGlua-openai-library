@@ -1,11 +1,11 @@
--- 作者阿泽
+-- 作者阿泽，技术支持claude
 -- OpenAI API 库 - 专为GG修改器设计
 -- 作为单一函数提供，无需require导入
 function CreateOpenAIClient(apiKey, baseUrl)
     local openai = {}
     
     -- OpenAI API基础URL（默认使用你提供的代理URL）
-    baseUrl = baseUrl or "http://api.openai.com/v1"
+    baseUrl = baseUrl or "https://api.openai.com/v1"
     
     -- 确保提供有效的API密钥
     if not apiKey or type(apiKey) ~= "string" or apiKey == "" then
@@ -379,84 +379,121 @@ function CreateOpenAIClient(apiKey, baseUrl)
         return nil
     end
     
+    
+    local function handleApiError(result, defaultMessage)
+    defaultMessage = defaultMessage or "API请求出错"
+    
+    if not result then
+        return defaultMessage
+    elseif type(result) == "table" then
+        if result.error then
+            if type(result.error) == "table" then
+                return result.error.message or result.error.type or defaultMessage
+            else
+                return tostring(result.error)
+            end
+        elseif result.message then
+            return result.message
+        end
+    end
+    
+    return defaultMessage
+end
     -- 发送HTTP请求的函数
     local function makeRequest(method, endpoint, data, params)
-        local url = baseUrl .. endpoint
+    local url = baseUrl .. endpoint
+    
+    -- 添加查询参数
+    if params and type(params) == "table" then
+        local queryParams = {}
+        for k, v in pairs(params) do
+            table.insert(queryParams, k .. "=" .. tostring(v))
+        end
         
-        -- 添加查询参数
-        if params and type(params) == "table" then
-            local queryParams = {}
-            for k, v in pairs(params) do
-                table.insert(queryParams, k .. "=" .. tostring(v))
+        if #queryParams > 0 then
+            url = url .. "?" .. table.concat(queryParams, "&")
+        end
+    end
+    
+    -- 设置请求头
+    local headers = {
+        ["Authorization"] = "Bearer " .. apiKey,
+        ["Content-Type"] = "application/json"
+    }
+    
+    -- 准备请求体
+    local body = nil
+    if data then
+        body = tableToJson(data)
+    end
+    
+    -- 发送请求
+    local response = gg.makeRequest(url, headers, body)
+    
+    if not response then
+        return nil, "API请求错误: 无响应"
+    end
+    
+    -- 检查响应类型
+    if type(response) == "table" then
+        -- 检查是否有错误
+        if response.code >= 400 then
+            -- 尝试解析错误响应
+            local errorInfo = "未知错误"
+            if response.content and response.content ~= "" then
+                local success, result = pcall(jsonToTable, response.content)
+                if success and result and result.error then
+                    errorInfo = result.error.message or tostring(result.error)
+                end
             end
             
-            if #queryParams > 0 then
-                url = url .. "?" .. table.concat(queryParams, "&")
+            return nil, "API请求错误: " .. errorInfo .. " (代码: " .. response.code .. ")"
+        end
+        
+        -- 从响应表中提取内容
+        if not response.content or type(response.content) ~= "string" or response.content == "" then
+            return nil, "API响应内容为空"
+        end
+        
+        -- 判断内容类型
+        local contentType = ""
+        if response.headers then
+            for _, header in ipairs(response.headers) do
+                local name, value = header:match("([^:]+):%s*(.*)")
+                if name and name:lower() == "content-type" then
+                    contentType = value:lower()
+                    break
+                end
             end
         end
         
-        -- 设置请求头
-        local headers = {
-            ["Authorization"] = "Bearer " .. apiKey,
-            ["Content-Type"] = "application/json"
-        }
-        
-        -- 准备请求体
-        local body = nil
-        if data then
-            body = tableToJson(data)
-        end
-        
-        -- 发送请求
-        local response = gg.makeRequest(url, headers, body)
-        
-        if not response then
-            return nil, "API请求错误: 无响应"
-        end
-        
-        -- 检查响应类型
-        if type(response) == "table" then
-            -- 检查是否有错误
-            if response.code >= 400 then
-                return nil, "API请求错误: " .. (response.message or "未知错误") .. " (代码: " .. response.code .. ")"
-            end
-            
-            -- 从响应表中提取内容
-            if not response.content or type(response.content) ~= "string" or response.content == "" then
-                return nil, "API响应内容为空"
-            end
-            
-            -- 使用content字段中的JSON字符串
+        -- 根据内容类型处理
+        if contentType:find("application/json") then
+            -- 解析JSON
             local success, result = pcall(jsonToTable, response.content)
             if not success then
                 return nil, "JSON解析错误: " .. tostring(result)
             end
-            
-            return result, nil
-        elseif type(response) == "string" then
-            -- 如果是字符串，直接解析
-            local success, result = pcall(jsonToTable, response)
-            if not success then
-                return nil, "JSON解析错误: " .. tostring(result)
-            end
-            
             return result, nil
         else
-            -- 其他类型，返回错误
-            return nil, "API响应格式错误: 期望表或字符串"
+            -- 返回原始内容
+            return response.content, nil
         end
-    end
-    
-    -- 统一处理API错误的函数
-    local function handleApiError(result)
-        if not result then
-            return "未知错误"
-        elseif result.error then
-            return result.error.message or "API错误"
+    elseif type(response) == "string" then
+        -- 尝试解析为JSON
+        local success, result = pcall(jsonToTable, response)
+        if success then
+            return result, nil
         else
-            return "未知错误"
+            -- 返回原始字符串
+            return response, nil
         end
+    else
+        -- 其他类型，返回错误
+        return nil, "API响应格式错误: 期望表或字符串"
     end
+end
+
     
     ---------------------------
     -- 核心API方法
@@ -599,23 +636,152 @@ function CreateOpenAIClient(apiKey, baseUrl)
         return makeRequest("POST", "/images/variations", params)
     end
     
-    -- API方法：音频转录
-    function openai.createTranscription(params)
-        if not params then
-            params = {}
+    
+    
+    
+    
+    -- API方法：文本到语音转换
+function openai.createSpeech(params)
+    if not params then
+        params = {}
+    end
+    
+    -- 确保必要参数存在
+    if not params.model then
+        params.model = "tts-1" -- 默认使用tts-1模型
+    end
+    
+    if not params.input then
+        return nil, "必须提供输入文本"
+    end
+    
+    if not params.voice then
+        params.voice = "alloy" -- 默认使用alloy语音
+    end
+    
+    -- 发送请求
+    local result, err = makeRequest("POST", "/audio/speech", params)
+    if err then
+        return nil, err
+    end
+    
+    -- 如果需要保存到文件
+    
+    if params.output_file then
+        -- 检查响应是否为二进制数据
+        if type(result) == "string" then
+            local file = io.open(params.output_file, "wb")
+            if file then
+                file:write(result)
+                file:close()
+                return {path = params.output_file}, nil
+            else
+                return nil, "无法写入文件: " .. params.output_file
+            end
+        else
+            return nil, "无效的音频数据格式"
+        end
+    end
+    
+    return result, nil
+end
+
+-- 改进的音频转录（支持更多选项）
+function openai.createTranscription(params)
+    if not params then
+        params = {}
+    end
+    
+    -- 确保必要参数存在
+    if not params.file then
+        return nil, "必须提供音频文件"
+    end
+    
+    if not params.model then
+        params.model = "whisper-1" -- 默认使用whisper-1模型
+    end
+    
+    -- 处理文件输入
+    if type(params.file) == "string" and params.file:match("^[^/]") then
+        -- 如果是文件路径，读取文件内容
+        local file = io.open(params.file, "rb")
+        if not file then
+            return nil, "无法打开文件: " .. params.file
         end
         
-        -- 确保必要参数存在
-        if not params.file then
-            return nil, "必须提供音频文件"
+        local content = file:read("*all")
+        file:close()
+        
+        -- 构建multipart/form-data请求
+        local boundary = "----WebKitFormBoundary" .. tostring(os.time())
+        local body = ""
+        
+        -- 添加model字段
+        body = body .. "--" .. boundary .. "\r\n"
+        body = body .. 'Content-Disposition: form-data; name="model"' .. "\r\n\r\n"
+        body = body .. params.model .. "\r\n"
+        
+        -- 添加语言字段（如果提供）
+        if params.language then
+            body = body .. "--" .. boundary .. "\r\n"
+            body = body .. 'Content-Disposition: form-data; name="language"' .. "\r\n\r\n"
+            body = body .. params.language .. "\r\n"
         end
         
-        if not params.model then
-            params.model = "whisper-1"
+        -- 添加提示字段（如果提供）
+        if params.prompt then
+            body = body .. "--" .. boundary .. "\r\n"
+            body = body .. 'Content-Disposition: form-data; name="prompt"' .. "\r\n\r\n"
+            body = body .. params.prompt .. "\r\n"
         end
         
+        -- 添加响应格式字段（如果提供）
+        if params.response_format then
+            body = body .. "--" .. boundary .. "\r\n"
+            body = body .. 'Content-Disposition: form-data; name="response_format"' .. "\r\n\r\n"
+            body = body .. params.response_format .. "\r\n"
+        end
+        
+        -- 添加文件内容
+        body = body .. "--" .. boundary .. "\r\n"
+        body = body .. 'Content-Disposition: form-data; name="file"; filename="' .. params.file:match("([^/\\]+)$") .. '"' .. "\r\n"
+        body = body .. 'Content-Type: application/octet-stream' .. "\r\n\r\n"
+        body = body .. content .. "\r\n"
+        
+        -- 结束boundary
+        body = body .. "--" .. boundary .. "--\r\n"
+        
+        -- 设置请求头
+        local headers = {
+            ["Authorization"] = "Bearer " .. apiKey,
+            ["Content-Type"] = "multipart/form-data; boundary=" .. boundary
+        }
+        
+        -- 发送请求
+        local response = gg.makeRequest(baseUrl .. "/audio/transcriptions", headers, body)
+        
+        if not response then
+            return nil, "API请求错误: 无响应"
+        end
+        
+        -- 处理响应
+        if type(response) == "table" and response.content then
+            local success, result = pcall(jsonToTable, response.content)
+            if not success then
+                return nil, "JSON解析错误: " .. tostring(result)
+            end
+            
+            return result, nil
+        else
+            return nil, "API响应格式错误"
+        end
+    else
+        -- 原有逻辑保持不变，使用makeRequest函数
         return makeRequest("POST", "/audio/transcriptions", params)
     end
+end
+    
+  
     
     -- API方法：音频翻译
     function openai.createTranslation(params)
@@ -918,6 +1084,7 @@ function CreateOpenAIClient(apiKey, baseUrl)
         local prompt = "请从以下文本中提取" .. infoType .. ":\n\n" .. text
         return openai.chat(prompt, model)
     end
+    
     
     -- 简单工具函数：安全运行函数并处理错误
     function openai.safeRun(func, ...)
