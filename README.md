@@ -146,26 +146,20 @@ end
 #### 5. 音频
 
 ```lua
--- 音频转录
-local params = {
-    file = "/sdcard/recording.mp3",
-    model = "whisper-1"
-}
-
-local result, err = openai.createTranscription(params)
-if not err then
-    gg.alert("转录结果: " .. result.text)
+-- 音频转录示例
+local transcript, err = openai.transcribeAudio("recording.mp3", "whisper-1", "zh")--音频文件，模型，语言
+if err then
+    print("转录失败:", err)
+else
+    print("转录结果:", transcript)
 end
 
--- 音频翻译
-local params = {
-    file = "/sdcard/recording.mp3",
-    model = "whisper-1"
-}
-
-local result, err = openai.createTranslation(params)
-if not err then
-    gg.alert("翻译结果: " .. result.text)
+-- 音频翻译示例（自动翻译成英语）
+local translation, err = openai.translateAudio("chinese_audio.mp3")
+if err then
+    print("翻译失败:", err)
+else
+    print("翻译结果:", translation)
 end
 
 
