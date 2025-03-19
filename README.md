@@ -15,7 +15,7 @@ QQ2585579144
 ```lua
 -- 导入库
 load(gg.makeRequest('https://azapi.lzx1.top/lib/openai.lua').content)()
-或者
+--或者
 loadfile('openai.lua')--导入本地库
 
 -- 创建OpenAI客户端（使用你的API密钥）
@@ -143,7 +143,7 @@ if not err then
 end
 ```
 
-#### 5. 音频转录和翻译
+#### 5. 音频
 
 ```lua
 -- 音频转录
@@ -166,6 +166,20 @@ local params = {
 local result, err = openai.createTranslation(params)
 if not err then
     gg.alert("翻译结果: " .. result.text)
+end
+
+
+-- 文本转语音
+local params = {
+    model = "tts-1",
+    voice = "alloy", -- 可选: alloy, echo, fable, onyx, nova, shimmer
+    input = "这是一段由AI生成的语音测试",
+    output_file = "/sdcard/Download/ai_speech.mp3"
+}
+
+local result, err = openai.createSpeech(params)
+if not err then
+    gg.alert("语音已保存到: " .. result.path)
 end
 ```
 
