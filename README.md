@@ -16,7 +16,7 @@ QQ2585579144
 -- 导入库
 load(gg.makeRequest('https://azapi.lzx1.top/lib/openai.lua').content)()
 --或者
-loadfile('openai.lua')--导入本地库
+loadfile('openai.lua')()--导入本地库
 
 -- 创建OpenAI客户端（使用你的API密钥）
 local openai = CreateOpenAIClient("你的API密钥")
