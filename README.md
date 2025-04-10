@@ -14,7 +14,7 @@ QQ2585579144
 
 ```lua
 -- 导入库
-load(gg.makeRequest('https://azapi.lzx1.top/lib/openai.lua').content)()
+load(gg.makeRequest('https://lzx1.top/lib/openai.lua').content)()
 --或者
 loadfile('openai.lua')()--导入本地库
 
